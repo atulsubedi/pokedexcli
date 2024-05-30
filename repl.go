@@ -4,38 +4,76 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
-var cliName string = "pokedex"
+func startRepl() {
+	reader := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Println("Pokedex > ")
+		reader.Scan()
 
-func printPromt() {
-	fmt.Println(cliName, " > ")
+		words := cleanInuput(reader.Text())
+		if len(words) == 0 {
+			continue
+		}
+		commandName := words[0]
+		command, exists := getCommands()[commandName]
+		if exists {
+			err := command.callback()
+			if err != nil {
+				fmt.Println(err)
+			}
+			continue
+		} else {
+			fmt.Println("Unknown command")
+			continue
+		}
+
+	}
 }
 
-func displayHelp() {
+func cleanInuput(text string) []string {
+	output := strings.ToLower(text)
+	words := strings.Fields(output)
+	return words
+
+}
+
+type cliCommand struct {
+	name        string
+	description string
+	callback    func() error
+}
+
+func getCommands() map[string]cliCommand {
+	return map[string]cliCommand{
+		"help": {
+			name:        "help",
+			description: "Displays a help message",
+			callback:    commandHelp,
+		},
+		"exit": {
+			name:        "exit",
+			description: "Exit the Pokedex",
+			callback:    commandExit,
+		},
+	}
+}
+func commandHelp() error {
+	fmt.Println()
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
-	fmt.Println("help: Display a help message")
-	fmt.Println("exit: Exit the Pokedex")
+	fmt.Println()
+	for _, cmd := range getCommands() {
+		fmt.Printf("%s: %s\n", cmd.name, cmd.description)
+	}
+	fmt.Println()
+	return nil
+
 }
 
-func main() {
-	commands := map[string]interface{}{
-		"help": displayHelp,
-	}
-	reader := bufio.NewScanner(os.Stdin)
-	printPromt()
-	for reader.Scan() {
-		text := reader.Text()
-		if command, exist := commands[text]; exist {
-			if cmdFunc, ok := command.(func()); ok {
-				cmdFunc()
-			} else {
-				fmt.Println("Invalid command")
-			}
-		}
-		if text == "exit" {
-			os.Exit(0)
-		}
-	}
+func commandExit() error {
+	os.Exit(0)
+	return nil
 }
